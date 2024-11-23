@@ -1,0 +1,15 @@
+#!/bin/zsh
+
+files=(
+    "CMakeCache.txt" "CMakeFiles" "Makefile" "cmake_install.cmake" "_deps" "bin" "lib"
+    "liblexer_lib.a" "compile_commands.json"
+)
+
+for file in "${files[@]}"; do
+    if [[ -e $file ]]; then
+        echo "Deleting $file"
+        rm -rf "$file"
+    else
+        echo "$file not found"
+    fi
+done

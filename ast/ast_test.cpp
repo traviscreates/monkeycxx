@@ -2,7 +2,7 @@
 #include "ast.h"
 #include "token.h"
 
-TEST(ASTTest, TestString) {
+TEST(ASTTest, TestStringOld) {
     token::Token letToken = {token::LET, "let"};
     token::Token identToken1 = {token::IDENT, "myVar"};
     token::Token identToken2 = {token::IDENT, "anotherVar"};

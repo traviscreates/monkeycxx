@@ -1,6 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
+#include <ios>
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,6 +12,7 @@ namespace ast {
 class Node {
 public:
     virtual std::string TokenLiteral() const = 0;
+    virtual std::string String() const = 0;
     virtual ~Node() = default;
 };
 
@@ -22,13 +24,15 @@ public:
 class Expression : public Node {
 public:
     virtual void expressionNode() = 0;
+    virtual ~Expression() = default;
+
 };
 
 class Program : public Node {
 public:
     std::vector<std::unique_ptr<Statement>> Statements;
     std::string TokenLiteral() const override;
-    std::string String() const;
+    std::string String() const override;
 };
 
 class LetStatement : public Statement {
@@ -39,6 +43,7 @@ public:
 
     void statementNode() override;
     std::string TokenLiteral() const override;
+    std::string String() const override;
 };
 
 class ReturnStatement : public Statement {
@@ -48,6 +53,17 @@ public:
 
     void statementNode() override;
     std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
+class ExpressionStatement : public Statement {
+public:
+    token::Token Token;
+    std::unique_ptr<Expression> Expression;
+
+    void statementNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
 };
 
 class Identifier : public Expression {
@@ -59,17 +75,60 @@ public:
     Identifier(const token::Token& tok, const std::string& val);
     void expressionNode() override;
     std::string TokenLiteral() const override;
+    std::string String() const override;
 };
 
-class ExpressionStatement : public Statement {
+class IntegerLiteral : public Expression {
 public:
     token::Token Token;
-    std::unique_ptr<Expression> Expression;
+    int64_t Value;
 
-    void statementNode() override;
-    std::string TokenLiteral() const override {
-        return Token.Literal;
-    }
+    IntegerLiteral(const token::Token& tok);
+    IntegerLiteral(const token::Token& tok, const int64_t& val);
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
+class PrefixExpression : public Expression {
+public:
+    token::Token Token;
+    std::string Operator;
+    std::unique_ptr<Expression> Right;
+
+    PrefixExpression(const token::Token& tok, const std::string& op);
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
+class InfixExpression : public Expression {
+public:
+    token::Token Token;
+    std::unique_ptr<Expression> Left;
+    std::string Operator;
+    std::unique_ptr<Expression> Right;
+
+    InfixExpression(
+        const token::Token& tok,
+        std::unique_ptr<Expression> left,
+        const std::string& op,
+        std::unique_ptr<Expression> right
+    );
+
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
+class Boolean : public Expression {
+public:
+    token::Token Token;
+    bool Value;
+
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
 };
 
 }

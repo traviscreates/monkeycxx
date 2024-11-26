@@ -1,0 +1,7 @@
+.cache
+build/.cache
+build/ast_test
+build/lexer_test
+build/parser_test
+build/start
+*.code-workspace

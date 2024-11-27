@@ -131,6 +131,40 @@ public:
     std::string String() const override;
 };
 
+class BlockStatement : public Statement {
+public:
+    token::Token Token;  // The '{' token
+    std::vector<std::unique_ptr<Statement>> Statements;
+
+    BlockStatement() = default;
+
+    void statementNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
+class IfExpression : public Expression {
+public:
+    token::Token Token;  // The 'if' token
+    std::unique_ptr<Expression> Condition;
+    std::unique_ptr<BlockStatement> Consequence;
+    std::unique_ptr<BlockStatement> Alternative;
+
+    IfExpression() = default;
+    IfExpression(
+        const token::Token& token,
+        std::unique_ptr<Expression> condition,
+        std::unique_ptr<BlockStatement> consequence,
+        std::unique_ptr<BlockStatement> alternative
+    );
+
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
 }
 
 #endif
+
+

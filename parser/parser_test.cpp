@@ -153,7 +153,6 @@ let foobar = 838383;
     auto p = parser::New(std::move(l));
 
     std::unique_ptr<ast::Program> program = p->ParseProgram();
-
     checkParserErrors(*p);
     ASSERT_NE(program, nullptr);
     ASSERT_EQ(program->Statements.size(), 3);
@@ -179,7 +178,6 @@ return 993322;
     auto p = parser::New(std::move(l));
 
     std::unique_ptr<ast::Program> program = p->ParseProgram();
-
     checkParserErrors(*p);
     ASSERT_NE(program, nullptr);
     ASSERT_EQ(program->Statements.size(), 3);
@@ -201,7 +199,6 @@ TEST(ParserTests, TestIdentifierExpression) {
     auto parser = parser::New(std::move(lexer));
 
     auto program = parser->ParseProgram();
-
     checkParserErrors(*parser);
     ASSERT_EQ(program->Statements.size(), 1) << "Program has incorrect number of statements.";
 
@@ -220,7 +217,6 @@ TEST(ParserTests, TestIntegerLiteralExpression) {
     auto parser = parser::New(std::move(lexer));
 
     auto program = parser->ParseProgram();
-
     checkParserErrors(*parser);
     ASSERT_EQ(program->Statements.size(), 1) << "Program has incorrect number of statements.";
 
@@ -251,9 +247,9 @@ TEST(ParserTests, TestParsingPrefixExpressions) {
         auto parser = std::make_unique<parser::Parser>(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+        ASSERT_EQ(program->Statements.size(), 1)
+            << "program.Statements does not contain 1 statement";
 
         const auto* stmt = dynamic_cast<const ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
@@ -283,9 +279,9 @@ TEST(ParserTests, TestParsingPrefixExpressionsWithBooleanInput) {
         auto parser = std::make_unique<parser::Parser>(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+        ASSERT_EQ(program->Statements.size(), 1)
+            << "program.Statements does not contain 1 statement";
 
         const auto* stmt = dynamic_cast<const ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
@@ -322,9 +318,9 @@ TEST(ParserTests, TestParsingInfixExpressions) {
         auto parser = parser::New(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+        ASSERT_EQ(program->Statements.size(), 1)
+            << "program.Statements does not contain 1 statement";
 
         auto stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
@@ -357,9 +353,9 @@ TEST(ParserTests, TestParsingInfixBooleanExpressions) {
         auto parser = parser::New(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+        ASSERT_EQ(program->Statements.size(), 1)
+            << "program.Statements does not contain 1 statement";
 
         auto stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
@@ -403,9 +399,9 @@ TEST(ParserTests, TestParsingOperatorPrecedence) {
         auto parser = parser::New(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
         ASSERT_GT(program->Statements.size(), 0) << "program.Statements does not contain statements";
+
         auto result = program->String();
         ASSERT_EQ(result, tt.expected) << "Expected: " << tt.expected << ", but got: " << result;
     }
@@ -427,7 +423,6 @@ TEST(ParserTests, TestBoolean) {
         auto parser = parser::New(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
         ASSERT_EQ(program->Statements.size(), 1) << "Program has incorrect number of statements.";
 
@@ -450,10 +445,66 @@ TEST(ParserTests, TestBoolean) {
         auto parser = parser::New(std::move(lexer));
 
         auto program = parser->ParseProgram();
-
         checkParserErrors(*parser);
-        ASSERT_GT(program->Statements.size(), 0) << "program.Statements does not contain statements";
+        ASSERT_GT(program->Statements.size(), 0)
+            << "program.Statements does not contain statements";
+
         auto result = program->String();
         ASSERT_EQ(result, tt.expected) << "Expected: " << tt.expected << ", but got: " << result;
     }
+}
+
+TEST(ParserTests, TestIfExpression) {
+    std::string input = "if (x < y) { x }";
+    auto lexer = std::make_unique<lexer::Lexer>(input);
+    auto parser = parser::New(std::move(lexer));
+
+    auto program = parser->ParseProgram();
+    checkParserErrors(*parser);
+    ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+
+    auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
+    ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
+
+    auto* exp = dynamic_cast<ast::IfExpression*>(stmt->Expression.get());
+    ASSERT_NE(exp, nullptr) << "stmt.Expression is not ast::IfExpression";
+    ASSERT_TRUE(testInfixExpression(exp->Condition.get(), "x", "<", "y"));
+    ASSERT_EQ(exp->Consequence->Statements.size(), 1)
+        << "consequence does not contain 1 statement. got=" << exp->Consequence->Statements.size();
+
+    auto* consequence = dynamic_cast<ast::ExpressionStatement*>(exp->Consequence->Statements[0].get());
+    ASSERT_NE(consequence, nullptr) << "Consequence statement is not ast::ExpressionStatement";
+    ASSERT_TRUE(testIdentifier(consequence->Expression.get(), "x"));
+    ASSERT_EQ(exp->Alternative, nullptr)
+        << "exp.Alternative was not null. got=" << exp->Alternative.get();
+}
+
+TEST(ParserTests, TestIfElseExpression) {
+    std::string input = "if (x < y) { x } else { y }";
+    auto lexer = std::make_unique<lexer::Lexer>(input);
+    auto parser = parser::New(std::move(lexer));
+
+    auto program = parser->ParseProgram();
+    checkParserErrors(*parser);
+    ASSERT_EQ(program->Statements.size(), 1) << "Statements does not contain 1 statement";
+
+    auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
+    ASSERT_NE(stmt, nullptr) << "Statements[0] is not ast::ExpressionStatement";
+
+    auto* exp = dynamic_cast<ast::IfExpression*>(stmt->Expression.get());
+    ASSERT_NE(exp, nullptr) << "Expression is not ast::IfExpression";
+    ASSERT_TRUE(testInfixExpression(exp->Condition.get(), "x", "<", "y"));
+    ASSERT_EQ(exp->Consequence->Statements.size(), 1)
+        << "Consequence does not contain 1 statement. Got=" << exp->Consequence->Statements.size();
+
+    auto* consequence = dynamic_cast<ast::ExpressionStatement*>(exp->Consequence->Statements[0].get());
+    ASSERT_NE(consequence, nullptr) << "Consequence statement is not ast::ExpressionStatement";
+    ASSERT_TRUE(testIdentifier(consequence->Expression.get(), "x"));
+    ASSERT_NE(exp->Alternative, nullptr) << "Alternative statement should not be a nullptr";
+    ASSERT_EQ(exp->Alternative->Statements.size(), 1)
+        << "Alternative does not contain 1 statement. Got=" << exp->Alternative->Statements.size();
+
+    auto* alternative = dynamic_cast<ast::ExpressionStatement*>(exp->Alternative->Statements[0].get());
+    ASSERT_NE(alternative, nullptr) << "Alternative statement is not ast::ExpressionStatement";
+    ASSERT_TRUE(testIdentifier(alternative->Expression.get(), "y"));
 }

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -26,6 +27,7 @@ Parser::Parser(std::unique_ptr<lexer::Lexer> lexer) : l(std::move(lexer)) {
     registerPrefix(token::FALSE, [this]() { return parseBoolean(); });
     registerPrefix(token::TRUE, [this]() { return parseBoolean(); });
     registerPrefix(token::LPAREN, [this]() { return parseGroupedExpression(); });
+    registerPrefix(token::IF, [this]() { return parseIfExpression(); });
 
     registerInfix(token::PLUS, [this](std::unique_ptr<ast::Expression> left) {
         return parseInfixExpression(std::move(left));
@@ -223,6 +225,61 @@ std::unique_ptr<ast::Expression> Parser::parseGroupedExpression() {
     auto exp = parseExpression(LOWEST);
     if (!expectPeek(token::RPAREN)) {
         return nullptr;
+    }
+
+    return exp;
+}
+
+std::unique_ptr<ast::BlockStatement> Parser::parseBlockStatement() {
+    auto block = std::make_unique<ast::BlockStatement>();
+    block->Token = curToken;
+
+    nextToken();
+
+    while (!curTokenIs(token::RBRACE) && !curTokenIs(token::EOF_)) {
+        auto stmt = parseStatement();
+        if (stmt) {
+            block->Statements.push_back(std::move(stmt));
+        }
+        nextToken();
+    }
+
+    return block;
+}
+
+std::unique_ptr<ast::Expression> Parser::parseIfExpression() {
+    auto exp = std::make_unique<ast::IfExpression>();
+    exp->Token = curToken;
+    if (!expectPeek(token::LPAREN)) {
+        return nullptr;
+    }
+
+    nextToken();
+
+    exp->Condition = parseExpression(Precedence::LOWEST);
+    if (!exp->Condition) {
+        return nullptr;
+    }
+
+    if (!expectPeek(token::RPAREN)) {
+        return nullptr;
+    }
+
+    if (!expectPeek(token::LBRACE)) {
+        return nullptr;
+    }
+
+    exp->Consequence = parseBlockStatement();
+    if (!exp->Consequence) {
+        return nullptr;
+    }
+
+    if (peekTokenIs(token::ELSE)) {
+        nextToken();
+        if (!expectPeek(token::LBRACE)) {
+            return nullptr;
+        }
+        exp->Alternative = parseBlockStatement();
     }
 
     return exp;

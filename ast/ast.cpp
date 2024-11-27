@@ -139,4 +139,42 @@ std::string Boolean::String() const {
     return Token.Literal;
 }
 
+void BlockStatement::statementNode() {}
+
+std::string BlockStatement::TokenLiteral() const {
+    return Token.Literal;
+}
+
+std::string BlockStatement::String() const {
+    std::ostringstream out;
+    for (const auto& statement : Statements) {
+        out << statement->String();
+    }
+    return out.str();
+}
+
+IfExpression::IfExpression(const token::Token& token,
+                           std::unique_ptr<Expression> condition,
+                           std::unique_ptr<BlockStatement> consequence,
+                           std::unique_ptr<BlockStatement> alternative)
+    : Token(token),
+      Condition(std::move(condition)),
+      Consequence(std::move(consequence)),
+      Alternative(std::move(alternative)) {}
+
+void IfExpression::expressionNode() {}
+
+std::string IfExpression::TokenLiteral() const {
+    return Token.Literal;
+}
+
+std::string IfExpression::String() const {
+    std::ostringstream out;
+    out << "if" << Condition->String() << " " << Consequence->String();
+    if (Alternative) {
+        out << "else " << Alternative->String();
+    }
+    return out.str();
+}
+
 }

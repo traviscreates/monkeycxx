@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(MonkeyCpp)
+project(MonkeyCxx)
 
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_CXX_STANDARD 20)
@@ -25,33 +25,33 @@ endif()
 FetchContent_MakeAvailable(googletest)
 
 # Add the lexer library
-add_library(lexer_lib lexer/lexer.cpp token/token.cpp)
+add_library(lexer_lib lexer/lexer.cxx token/token.cxx)
 # Link the lexer library with the token header
 target_include_directories(lexer_lib PUBLIC ${PROJECT_SOURCE_DIR}/token)
 # Add the test executable for lexer
-add_executable(lexer_test lexer/lexer_test.cpp)
+add_executable(lexer_test lexer/lexer_test.cxx)
 # Link the lexer test executable with the lexer library and GoogleTest
 target_link_libraries(lexer_test lexer_lib gtest gtest_main)
 # Include GoogleTest headers
 target_include_directories(lexer_test PRIVATE ${gtest_SOURCE_DIR}/include)
 
 # Add the executable for the REPL (start program)
-add_executable(start main.cpp repl/repl.cpp)
+add_executable(start main.cxx repl/repl.cxx)
 # Link the start executable with the lexer library and other dependencies
 target_link_libraries(start lexer_lib)
 # Include directories for the REPL
 target_include_directories(start PUBLIC ${PROJECT_SOURCE_DIR}/repl)
 
-add_library(ast_lib ast/ast.cpp token/token.cpp)
+add_library(ast_lib ast/ast.cxx token/token.cxx)
 target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/token)
 target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/lexer)
 target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/ast)
 
-add_executable(ast_test ast/ast_test.cpp)
+add_executable(ast_test ast/ast_test.cxx)
 target_link_libraries(ast_test ast_lib lexer_lib gtest gtest_main)
 target_include_directories(ast_test PRIVATE ${gtest_SOURCE_DIR}/include)
 
-add_library(parser_lib parser/parser.cpp)
+add_library(parser_lib parser/parser.cxx)
 target_include_directories(parser_lib PUBLIC
   ${PROJECT_SOURCE_DIR}/lexer
   ${PROJECT_SOURCE_DIR}/ast
@@ -59,6 +59,6 @@ target_include_directories(parser_lib PUBLIC
 )
 target_link_libraries(parser_lib lexer_lib ast_lib)
 
-add_executable(parser_test parser/parser_test.cpp)
+add_executable(parser_test parser/parser_test.cxx)
 target_link_libraries(parser_test parser_lib lexer_lib ast_lib gtest gtest_main)
 target_include_directories(parser_test PRIVATE ${gtest_SOURCE_DIR}/include)

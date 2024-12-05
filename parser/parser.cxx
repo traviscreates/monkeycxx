@@ -285,6 +285,27 @@ std::unique_ptr<ast::Expression> Parser::parseIfExpression() {
     return exp;
 }
 
+std::unique_ptr<ast::Expression> Parser::parseFunctionParameters() {
+    return nullptr;
+}
+
+std::unique_ptr<ast::FunctionLiteral> Parser::parseFunctionLiteral() {
+    auto funcLitPtr = std::make_unique<ast::FunctionLiteral>();
+    funcLitPtr->Token = curToken;
+    if (!expectPeek(token::LPAREN)) {
+        return nullptr;
+    }
+
+    funcLitPtr->Parameters = parseFunctionParameters();
+    if (!expectPeek(token::LBRACE)) {
+        return nullptr;
+    }
+
+    funcLitPtr->Body = parseBlockStatement();
+
+    return funcLitPtr;
+}
+
 bool Parser::curTokenIs(token::TokenType type) {
     return curToken.Type == type;
 }

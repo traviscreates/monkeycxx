@@ -163,8 +163,19 @@ public:
     std::string String() const override;
 };
 
+class FunctionLiteral : public Expression {
+public:
+    token::Token Token;
+    std::vector<std::unique_ptr<Identifier>> Parameters;
+    std::unique_ptr<BlockStatement> Body;
+
+    FunctionLiteral() = default;
+
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
 }
 
 #endif
-
-

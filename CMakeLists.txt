@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(MonkeyCxx)
 
+set(CMAKE_OSX_SYSROOT "/Library/Developer/CommandLineTools/SDKs/MacOSX15.1.sdk")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

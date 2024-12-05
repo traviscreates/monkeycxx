@@ -60,6 +60,8 @@ private:
     std::unique_ptr<ast::Expression> parseGroupedExpression();
     std::unique_ptr<ast::BlockStatement> parseBlockStatement();
     std::unique_ptr<ast::Expression> parseIfExpression();
+    std::vector<std::unique_ptr<ast::Identifier>> parseFunctionParameters();
+    std::unique_ptr<ast::FunctionLiteral> parseFunctionLiteral();
 
     bool curTokenIs(token::TokenType type);
     bool peekTokenIs(token::TokenType type);

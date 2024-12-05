@@ -177,4 +177,30 @@ std::string IfExpression::String() const {
     return out.str();
 }
 
+void FunctionLiteral::expressionNode() {}
+
+std::string FunctionLiteral::TokenLiteral() const {
+    return Token.Literal;
+}
+
+std::string FunctionLiteral::String() const {
+    std::ostringstream out;
+
+    out << TokenLiteral();
+    out << "(";
+    for (size_t i = 0; i < Parameters.size(); ++i) {
+        out << Parameters[i]->String();
+        if (i < Parameters.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ") ";
+
+    if (Body) {
+        out << Body->String();
+    }
+
+    return out.str();
+}
+
 }

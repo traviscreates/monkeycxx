@@ -88,17 +88,42 @@ bool testIdentifier(const ast::Expression* expr, std::string value) {
     return true;
 }
 
-using LiteralExpectedType = std::variant<int64_t, std::string>;
+bool testFunctionLiteral(const ast::Expression* expr, const std::unique_ptr<ast::FunctionLiteral>& arg) {
+    const auto* funcExp = dynamic_cast<const ast::FunctionLiteral*>(expr);
+    if (!funcExp) {
+        std::cerr << "Expression is not a FunctionLiteral. Got: " << typeid(expr).name() << std::endl;
+        return false;
+    }
 
-bool testLiteralExpression(const ast::Expression& exp, const LiteralExpectedType& expected) {
-    return std::visit([&exp](auto&& arg) -> bool {
+    if (funcExp->Parameters.size() != arg->Parameters.size()) {
+        std::cerr << "FunctionLiteral parameter count mismatch. Expected: "
+                  << arg->Parameters.size() << ", got: "
+                  << funcExp->Parameters.size() << std::endl;
+        return false;
+    }
+
+    for (size_t i = 0; i < arg->Parameters.size(); ++i) {
+        if (!testIdentifier(funcExp->Parameters[i].get(), arg->Parameters[i]->Value)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+using LiteralExpectedType = std::variant<bool, int64_t, std::string, std::unique_ptr<ast::FunctionLiteral>>;
+
+bool testLiteralExpression(const ast::Expression& expr, const LiteralExpectedType& expected) {
+    return std::visit([&expr](auto&& arg) -> bool {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, bool>) {
-            return testBoolean(&exp, arg);
+            return testBoolean(&expr, arg);
         } else if constexpr (std::is_same_v<T, int64_t>) {
-            return testIntegerLiteral(&exp, arg);
+            return testIntegerLiteral(&expr, arg);
         } else if constexpr (std::is_same_v<T, std::string>) {
-            return testIdentifier(&exp, arg);
+            return testIdentifier(&expr, arg);
+        } else if constexpr (std::is_same_v<T, std::unique_ptr<ast::FunctionLiteral>>) {
+            return testFunctionLiteral(&expr, arg);
         } else {
             std::cerr << "Type of exp not handled." << std::endl;
             return false;
@@ -461,22 +486,22 @@ TEST(ParserTests, TestIfExpression) {
 
     auto program = parser->ParseProgram();
     checkParserErrors(*parser);
-    ASSERT_EQ(program->Statements.size(), 1) << "program.Statements does not contain 1 statement";
+    ASSERT_EQ(program->Statements.size(), 1) << "program->Statements does not contain 1 statement";
 
     auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
-    ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
+    ASSERT_NE(stmt, nullptr) << "program->Statements[0] is not ast::ExpressionStatement";
 
     auto* exp = dynamic_cast<ast::IfExpression*>(stmt->Expression.get());
-    ASSERT_NE(exp, nullptr) << "stmt.Expression is not ast::IfExpression";
+    ASSERT_NE(exp, nullptr) << "stmt->Expression is not ast::IfExpression";
     ASSERT_TRUE(testInfixExpression(exp->Condition.get(), "x", "<", "y"));
     ASSERT_EQ(exp->Consequence->Statements.size(), 1)
-        << "consequence does not contain 1 statement. got=" << exp->Consequence->Statements.size();
+        << "Consequence does not contain 1 statement. Got: " << exp->Consequence->Statements.size();
 
     auto* consequence = dynamic_cast<ast::ExpressionStatement*>(exp->Consequence->Statements[0].get());
     ASSERT_NE(consequence, nullptr) << "Consequence statement is not ast::ExpressionStatement";
     ASSERT_TRUE(testIdentifier(consequence->Expression.get(), "x"));
     ASSERT_EQ(exp->Alternative, nullptr)
-        << "exp.Alternative was not null. got=" << exp->Alternative.get();
+        << "exp->Alternative was not null. Got: " << exp->Alternative.get();
 }
 
 TEST(ParserTests, TestIfElseExpression) {
@@ -495,16 +520,80 @@ TEST(ParserTests, TestIfElseExpression) {
     ASSERT_NE(exp, nullptr) << "Expression is not ast::IfExpression";
     ASSERT_TRUE(testInfixExpression(exp->Condition.get(), "x", "<", "y"));
     ASSERT_EQ(exp->Consequence->Statements.size(), 1)
-        << "Consequence does not contain 1 statement. Got=" << exp->Consequence->Statements.size();
+        << "Consequence does not contain 1 statement. Got: " << exp->Consequence->Statements.size();
 
     auto* consequence = dynamic_cast<ast::ExpressionStatement*>(exp->Consequence->Statements[0].get());
     ASSERT_NE(consequence, nullptr) << "Consequence statement is not ast::ExpressionStatement";
     ASSERT_TRUE(testIdentifier(consequence->Expression.get(), "x"));
     ASSERT_NE(exp->Alternative, nullptr) << "Alternative statement should not be a nullptr";
     ASSERT_EQ(exp->Alternative->Statements.size(), 1)
-        << "Alternative does not contain 1 statement. Got=" << exp->Alternative->Statements.size();
+        << "Alternative does not contain 1 statement. Got: " << exp->Alternative->Statements.size();
 
     auto* alternative = dynamic_cast<ast::ExpressionStatement*>(exp->Alternative->Statements[0].get());
     ASSERT_NE(alternative, nullptr) << "Alternative statement is not ast::ExpressionStatement";
     ASSERT_TRUE(testIdentifier(alternative->Expression.get(), "y"));
+}
+
+TEST(ParserTests, TestFunctionLiteralParsing) {
+    std::string input = "fn(x, y) { x + y; }";
+    auto lexer = std::make_unique<lexer::Lexer>(input);
+    auto parser = parser::New(std::move(lexer));
+
+    auto program = parser->ParseProgram();
+    checkParserErrors(*parser);
+    ASSERT_EQ(program->Statements.size(), 1) << "program->Statements does not contain 1 statement";
+
+    auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
+    ASSERT_NE(stmt, nullptr) << "program->Statements[0] is not ast::ExpressionStatement";
+
+    auto* function = dynamic_cast<ast::FunctionLiteral*>(stmt->Expression.get());
+    ASSERT_NE(function, nullptr) << "stmt->Expression is not ast::FunctionLiteral";
+
+    ASSERT_EQ(function->Parameters.size(), 2)
+        << "Function literal parameter count is wrong. Expected 2, got: "
+        << function->Parameters.size();
+    ASSERT_TRUE(testIdentifier(function->Parameters[0].get(), "x"));
+    ASSERT_TRUE(testIdentifier(function->Parameters[1].get(), "y"));
+    ASSERT_NE(function->Body, nullptr) << "function->Body is null";
+    ASSERT_EQ(function->Body->Statements.size(), 1)
+        << "function->Body->Statements count is wrong. Expected 1, got: "
+        << function->Body->Statements.size();
+
+    auto* bodyStmt = dynamic_cast<ast::ExpressionStatement*>(function->Body->Statements[0].get());
+    ASSERT_NE(bodyStmt, nullptr) << "function->Body->Statements[0] is not ast::ExpressionStatement";
+    ASSERT_TRUE(testInfixExpression(bodyStmt->Expression.get(), "x", "+", "y"));
+}
+
+TEST(ParserTests, TestFunctionParameterParsing) {
+    struct TestCase {
+        std::string input;
+        std::vector<std::string> expectedParams;
+    };
+
+    std::vector<TestCase> tests = {
+        {"fn() {};", {}},
+        {"fn(x) {};", {"x"}},
+        {"fn(x, y, z) {};", {"x", "y", "z"}}
+    };
+
+    for (const auto& test : tests) {
+        auto lexer = std::make_unique<lexer::Lexer>(test.input);
+        auto parser = parser::New(std::move(lexer));
+        auto program = parser->ParseProgram();
+        checkParserErrors(*parser);
+        ASSERT_EQ(program->Statements.size(), 1) << "Statements does not contain 1 statement";
+
+        auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
+        ASSERT_NE(stmt, nullptr) << "Statements[0] is not ast::ExpressionStatement";
+
+        auto* function = dynamic_cast<ast::FunctionLiteral*>(stmt->Expression.get());
+        ASSERT_NE(function, nullptr) << "Expression is not ast::FunctionLiteral";
+        ASSERT_EQ(function->Parameters.size(), test.expectedParams.size())
+            << "Length of parameters mismatch. Expected: " << test.expectedParams.size()
+            << ", got: " << function->Parameters.size();
+
+        for (size_t i = 0; i < test.expectedParams.size(); ++i) {
+            ASSERT_TRUE(testLiteralExpression(*function->Parameters[i].get(), test.expectedParams[i]));
+        }
+    }
 }

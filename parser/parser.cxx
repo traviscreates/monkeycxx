@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -28,6 +29,7 @@ Parser::Parser(std::unique_ptr<lexer::Lexer> lexer) : l(std::move(lexer)) {
     registerPrefix(token::TRUE, [this]() { return parseBoolean(); });
     registerPrefix(token::LPAREN, [this]() { return parseGroupedExpression(); });
     registerPrefix(token::IF, [this]() { return parseIfExpression(); });
+    registerPrefix(token::FUNCTION, [this]() { return parseFunctionLiteral(); });
 
     registerInfix(token::PLUS, [this](std::unique_ptr<ast::Expression> left) {
         return parseInfixExpression(std::move(left));
@@ -283,6 +285,54 @@ std::unique_ptr<ast::Expression> Parser::parseIfExpression() {
     }
 
     return exp;
+}
+
+std::vector<std::unique_ptr<ast::Identifier>> Parser::parseFunctionParameters() {
+    std::vector<std::unique_ptr<ast::Identifier>> identifiers;
+
+    if (peekTokenIs(token::RPAREN)) {
+        nextToken();
+        return identifiers;
+    }
+
+    nextToken();
+
+    auto ident = std::make_unique<ast::Identifier>();
+    ident->Token = curToken;
+    ident->Value = curToken.Literal;
+    identifiers.push_back(std::move(ident));
+
+    while (peekTokenIs(token::COMMA)) {
+        nextToken();
+        nextToken();
+        auto ident = std::make_unique<ast::Identifier>();
+        ident->Token = curToken;
+        ident->Value = curToken.Literal;
+        identifiers.push_back(std::move(ident));
+    }
+
+    if (!expectPeek(token::RPAREN)) {
+        return {};
+    }
+
+    return identifiers;
+}
+
+std::unique_ptr<ast::FunctionLiteral> Parser::parseFunctionLiteral() {
+    auto funcLitPtr = std::make_unique<ast::FunctionLiteral>();
+    funcLitPtr->Token = curToken;
+    if (!expectPeek(token::LPAREN)) {
+        return nullptr;
+    }
+
+    funcLitPtr->Parameters = parseFunctionParameters();
+    if (!expectPeek(token::LBRACE)) {
+        return nullptr;
+    }
+
+    funcLitPtr->Body = parseBlockStatement();
+
+    return funcLitPtr;
 }
 
 bool Parser::curTokenIs(token::TokenType type) {

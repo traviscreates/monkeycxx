@@ -17,7 +17,8 @@ const std::unordered_map<token::TokenType, Precedence> Parser::precedences = {
     {token::PLUS, SUM},
     {token::MINUS, SUM},
     {token::SLASH, PRODUCT},
-    {token::ASTERISK, PRODUCT}
+    {token::ASTERISK, PRODUCT},
+    {token::LPAREN, CALL}
 };
 
 Parser::Parser(std::unique_ptr<lexer::Lexer> lexer) : l(std::move(lexer)) {
@@ -55,10 +56,45 @@ Parser::Parser(std::unique_ptr<lexer::Lexer> lexer) : l(std::move(lexer)) {
     registerInfix(token::GT, [this](std::unique_ptr<ast::Expression> left) {
         return parseInfixExpression(std::move(left));
     });
+    registerInfix(token::LPAREN, [this](std::unique_ptr<ast::Expression> function) {
+        return parseCallExpression(std::move(function));
+    });
 
     // Read two tokens, so curToken and peekToken are both set
     nextToken();
     nextToken();
+}
+
+std::vector<std::unique_ptr<ast::Expression>> Parser::parseCallArguments() {
+    std::vector<std::unique_ptr<ast::Expression>> args;
+
+    if (peekTokenIs(token::RPAREN)) {
+        nextToken(); // Consume ')'
+        return args;
+    }
+
+    nextToken(); // Move to the first argument
+    args.push_back(parseExpression(LOWEST));
+
+    while (peekTokenIs(token::COMMA)) {
+        nextToken(); // Consume ','
+        nextToken(); // Move to the next argument
+        args.push_back(parseExpression(LOWEST));
+    }
+
+    if (!expectPeek(token::RPAREN)) {
+        return {};
+    }
+
+    return args;
+}
+
+std::unique_ptr<ast::Expression> Parser::parseCallExpression(std::unique_ptr<ast::Expression> function) {
+    auto callExpression = std::make_unique<ast::CallExpression>();
+    callExpression->Token = curToken;
+    callExpression->Function = std::move(function);
+    callExpression->Arguments = parseCallArguments();
+    return callExpression;
 }
 
 void Parser::nextToken() {

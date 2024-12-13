@@ -62,6 +62,8 @@ private:
     std::unique_ptr<ast::Expression> parseIfExpression();
     std::vector<std::unique_ptr<ast::Identifier>> parseFunctionParameters();
     std::unique_ptr<ast::FunctionLiteral> parseFunctionLiteral();
+    std::vector<std::unique_ptr<ast::Expression>> parseCallArguments();
+    std::unique_ptr<ast::Expression> parseCallExpression(std::unique_ptr<ast::Expression> function);
 
     bool curTokenIs(token::TokenType type);
     bool peekTokenIs(token::TokenType type);

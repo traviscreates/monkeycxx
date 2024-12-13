@@ -416,7 +416,10 @@ TEST(ParserTests, TestParsingOperatorPrecedence) {
         { "(5 + 5) * 2", "((5 + 5) * 2)" },
         { "2 / (5 + 5)", "(2 / (5 + 5))" },
         { "-(5 + 5)", "(-(5 + 5))" },
-        { "!(true == true)", "(!(true == true))" }
+        { "!(true == true)", "(!(true == true))" },
+        { "a + add(b * c) + d", "((a + add((b * c))) + d)" },
+        { "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))" },
+        { "add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))" }
     };
 
     for (const auto& tt : tests) {
@@ -581,7 +584,7 @@ TEST(ParserTests, TestFunctionParameterParsing) {
         auto parser = parser::New(std::move(lexer));
         auto program = parser->ParseProgram();
         checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1) << "Statements does not contain 1 statement";
+        ASSERT_EQ(program->Statements.size(), 1) << "program->Statements does not contain 1 statement";
 
         auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "Statements[0] is not ast::ExpressionStatement";
@@ -596,4 +599,30 @@ TEST(ParserTests, TestFunctionParameterParsing) {
             ASSERT_TRUE(testLiteralExpression(*function->Parameters[i].get(), test.expectedParams[i]));
         }
     }
+}
+
+TEST(ParserTest, TestCallExpressionParsing) {
+    const std::string input = "add(1, 2 * 3, 4 + 5);";
+    auto lexer = std::make_unique<lexer::Lexer>(input);
+    auto parser = parser::New(std::move(lexer));
+
+    auto program = parser->ParseProgram();
+    checkParserErrors(*parser);
+    ASSERT_EQ(program->Statements.size(), 1) << "program->Statements does not contain 1 statement";
+
+    auto* stmt = dynamic_cast<ast::ExpressionStatement*>(program->Statements[0].get());
+    ASSERT_NE(stmt, nullptr) << "Statements[0] is not ast::ExpressionStatement";
+
+    auto* exp = dynamic_cast<ast::CallExpression*>(stmt->Expression.get());
+    ASSERT_NE(exp, nullptr) << "stmt->Expression is not ast::CallExpression";
+    ASSERT_TRUE(testIdentifier(exp->Function.get(), "add"))
+        << "Function name is not 'add'. Got: " << exp->Function->String();
+    ASSERT_EQ(exp->Arguments.size(), 3)
+        << "Wrong length of arguments. Got: " << exp->Arguments.size();
+    ASSERT_TRUE(testLiteralExpression(*exp->Arguments[0].get(), 1))
+        << "Argument 0 does not match expected value 1.";
+    ASSERT_TRUE(testInfixExpression(exp->Arguments[1].get(), 2, "*", 3))
+        << "Argument 1 does not match expected infix expression '2 * 3'.";
+    ASSERT_TRUE(testInfixExpression(exp->Arguments[2].get(), 4, "+", 5))
+        << "Argument 2 does not match expected infix expression '4 + 5'.";
 }

@@ -203,4 +203,26 @@ std::string FunctionLiteral::String() const {
     return out.str();
 }
 
+void CallExpression::expressionNode() {}
+
+std::string CallExpression::TokenLiteral() const {
+    return Token.Literal;
+}
+
+std::string CallExpression::String() const {
+    std::ostringstream out;
+
+    out << Function->String();
+    out << "(";
+    for (size_t i = 0; i < Arguments.size(); ++i) {
+        out << Arguments[i]->String();
+        if (i < Arguments.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ")";
+
+    return out.str();
+}
+
 }

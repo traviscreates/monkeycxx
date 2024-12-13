@@ -176,6 +176,19 @@ public:
     std::string String() const override;
 };
 
+class CallExpression : public Expression {
+public:
+    token::Token Token;  // The '(' token
+    std::unique_ptr<Expression> Function;  // Identifier or FunctionLiteral
+    std::vector<std::unique_ptr<Expression>> Arguments;
+
+    CallExpression() = default;
+
+    void expressionNode() override;
+    std::string TokenLiteral() const override;
+    std::string String() const override;
+};
+
 }
 
 #endif

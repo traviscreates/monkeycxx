@@ -15,21 +15,27 @@ void checkParserErrors(const parser::Parser& p) {
     }
 }
 
-bool testLetStatement(ast::Statement* s, const std::string& name) {
-    if (s->TokenLiteral() != "let") {
+bool testLetStatement(const ast::Statement* stmt, const std::string& expectedName) {
+    if (stmt->TokenLiteral() != "let") {
+        std::cerr << "stmt->TokenLiteral is not 'let'. Got: " << stmt->TokenLiteral() << std::endl;
         return false;
     }
 
-    auto letStmt = dynamic_cast<ast::LetStatement*>(s);
+    const auto* letStmt = dynamic_cast<const ast::LetStatement*>(stmt);
     if (!letStmt) {
+        std::cerr << "Statement is not a LetStatement. Got: " << typeid(*stmt).name() << std::endl;
         return false;
     }
 
-    if (letStmt->Name->Value != name) {
+    if (letStmt->Name->Value != expectedName) {
+        std::cerr << "LetStatement name value mismatch. Expected: " << expectedName
+                  << ", got: " << letStmt->Name->Value << std::endl;
         return false;
     }
 
-    if (letStmt->Name->TokenLiteral() != name) {
+    if (letStmt->Name->TokenLiteral() != expectedName) {
+        std::cerr << "LetStatement name TokenLiteral mismatch. Expected: " << expectedName
+                  << ", got: " << letStmt->Name->TokenLiteral() << std::endl;
         return false;
     }
 

@@ -1,8 +1,13 @@
+#include "gtest/gtest.h"
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <memory>
+#include <typeinfo>
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"
+
+using LiteralExpectedType = std::variant<bool, int64_t, std::string, ast::FunctionLiteral*>;
 
 void checkParserErrors(const parser::Parser& p) {
     const auto& errors = p.Errors();
@@ -117,15 +122,15 @@ bool testFunctionLiteral(const ast::Expression* expr, const std::unique_ptr<ast:
     return true;
 }
 
-using LiteralExpectedType = std::variant<bool, int64_t, std::string, std::unique_ptr<ast::FunctionLiteral>>;
-
 bool testLiteralExpression(const ast::Expression& expr, const LiteralExpectedType& expected) {
     return std::visit([&expr](auto&& arg) -> bool {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, bool>) {
             return testBoolean(&expr, arg);
+        } else if constexpr (std::is_same_v<T, long long>) {
+            return testIntegerLiteral(&expr, static_cast<int64_t>(arg));
         } else if constexpr (std::is_same_v<T, int64_t>) {
-            return testIntegerLiteral(&expr, arg);
+            return testIntegerLiteral(&expr, static_cast<int64_t>(arg));
         } else if constexpr (std::is_same_v<T, std::string>) {
             return testIdentifier(&expr, arg);
         } else if constexpr (std::is_same_v<T, std::unique_ptr<ast::FunctionLiteral>>) {
@@ -137,12 +142,11 @@ bool testLiteralExpression(const ast::Expression& expr, const LiteralExpectedTyp
     }, expected);
 }
 
-// TODO: refactor tests
 bool testInfixExpression(
     const ast::Expression* expr,
-    const std::variant<bool, int64_t, std::string>& left,
+    const LiteralExpectedType& left,
     const std::string& operator_,
-    const std::variant<bool, int64_t, std::string>& right
+    const LiteralExpectedType& right
 ) {
     const auto* opExp = dynamic_cast<const ast::InfixExpression*>(expr);
     if (!opExp) {
@@ -151,7 +155,7 @@ bool testInfixExpression(
         return false;
     }
 
-    auto testLeft = [&](const auto& val) -> bool {
+    auto testLeft = [&](const LiteralExpectedType& val) -> bool {
         return testLiteralExpression(*opExp->Left.get(), val);
     };
     if (!std::visit(testLeft, left)) {
@@ -164,7 +168,7 @@ bool testInfixExpression(
         return false;
     }
 
-    auto testRight = [&](const auto& val) -> bool {
+    auto testRight = [&](const LiteralExpectedType& val) -> bool {
         return testLiteralExpression(*opExp->Right.get(), val);
     };
     if (!std::visit(testRight, right)) {
@@ -175,27 +179,35 @@ bool testInfixExpression(
 }
 
 TEST(ParserTests, TestLetStatements) {
-    std::string input = R"(
-let x = 5;
-let y = 10;
-let foobar = 838383;
-)";
-    auto l = std::make_unique<lexer::Lexer>(input);
-    auto p = parser::New(std::move(l));
-
-    std::unique_ptr<ast::Program> program = p->ParseProgram();
-    checkParserErrors(*p);
-    ASSERT_NE(program, nullptr);
-    ASSERT_EQ(program->Statements.size(), 3);
-
-    struct Test {
+    struct TestCase {
+        std::string input;
         std::string expectedIdentifier;
+        LiteralExpectedType expectedValue;
     };
 
-    std::vector<Test> tests = { {"x"}, {"y"}, {"foobar"} };
-    for (size_t i = 0; i < tests.size(); ++i) {
-        auto stmt = program->Statements[i].get();
-        EXPECT_TRUE(testLetStatement(stmt, tests[i].expectedIdentifier));
+    std::vector<TestCase> tests = {
+        {"let y = true;", "y", LiteralExpectedType{true}},
+        {"let x = 5;", "x", LiteralExpectedType{int64_t{5}}},
+        {"let foobar = y;", "foobar", LiteralExpectedType{std::string{"y"}}}
+    };
+
+    for (const auto& tt : tests) {
+        auto lexer = std::make_unique<lexer::Lexer>(tt.input);
+        auto parser = parser::New(std::move(lexer));
+
+        std::unique_ptr<ast::Program> program = parser->ParseProgram();
+        checkParserErrors(*parser);
+        ASSERT_NE(program, nullptr) << "parseProgram() returned a nullptr";
+        ASSERT_EQ(program->Statements.size(), 1)
+            << "program->Statements does not contain 1 statement. Got: "
+            << program->Statements.size();
+
+        const auto* stmt = program->Statements[0].get();
+        ASSERT_TRUE(testLetStatement(stmt, tt.expectedIdentifier));
+
+        const auto* letStmt = dynamic_cast<const ast::LetStatement*>(stmt);
+        ASSERT_NE(letStmt, nullptr) << "Failed to cast statement to LetStatement";
+        ASSERT_TRUE(testLiteralExpression(*letStmt->Value.get(), tt.expectedValue));
     }
 }
 
@@ -602,7 +614,7 @@ TEST(ParserTests, TestFunctionParameterParsing) {
             << ", got: " << function->Parameters.size();
 
         for (size_t i = 0; i < test.expectedParams.size(); ++i) {
-            ASSERT_TRUE(testLiteralExpression(*function->Parameters[i].get(), test.expectedParams[i]));
+            ASSERT_TRUE(testLiteralExpression(*function->Parameters[i].get(), LiteralExpectedType{test.expectedParams[i]}));
         }
     }
 }
@@ -625,7 +637,7 @@ TEST(ParserTest, TestCallExpressionParsing) {
         << "Function name is not 'add'. Got: " << exp->Function->String();
     ASSERT_EQ(exp->Arguments.size(), 3)
         << "Wrong length of arguments. Got: " << exp->Arguments.size();
-    ASSERT_TRUE(testLiteralExpression(*exp->Arguments[0].get(), 1))
+    ASSERT_TRUE(testLiteralExpression(*exp->Arguments[0].get(), LiteralExpectedType{1}))
         << "Argument 0 does not match expected value 1.";
     ASSERT_TRUE(testInfixExpression(exp->Arguments[1].get(), 2, "*", 3))
         << "Argument 1 does not match expected infix expression '2 * 3'.";

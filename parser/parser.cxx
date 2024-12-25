@@ -142,18 +142,19 @@ std::unique_ptr<ast::Statement> Parser::parseStatement() {
 std::unique_ptr<ast::LetStatement> Parser::parseLetStatement() {
     auto stmt = std::make_unique<ast::LetStatement>();
     stmt->Token = curToken;
-
     if (!expectPeek(token::IDENT)) {
         return nullptr;
     }
 
     stmt->Name = std::make_unique<ast::Identifier>(curToken, curToken.Literal);
-
     if (!expectPeek(token::ASSIGN)) {
         return nullptr;
     }
 
-    while (!curTokenIs(token::SEMICOLON)) {
+    nextToken();
+
+    stmt->Value = parseExpression(LOWEST);
+    if (peekTokenIs(token::SEMICOLON)) {
         nextToken();
     }
 
@@ -164,8 +165,10 @@ std::unique_ptr<ast::Statement> Parser::parseReturnStatement() {
     auto stmt = std::make_unique<ast::ReturnStatement>();
     stmt->Token = curToken;
 
-    // TODO Skipping expression parsing for now. Implement it later.
-    while (!curTokenIs(token::SEMICOLON)) {
+    nextToken();
+
+    stmt->ReturnValue = parseExpression(LOWEST);
+    if (peekTokenIs(token::SEMICOLON)) {
         nextToken();
     }
 

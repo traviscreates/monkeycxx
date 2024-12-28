@@ -1,7 +1,31 @@
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 #include "repl.h"
+#include "lexer.h"
+#include "parser.h"
 
 namespace repl {
+
+const std::string MONKEY_ASCII_ART = R"(
+       .-"-.            .-"-.          .-"-.
+     _/_-.-_\_        _/.-.-.\_      _/.-.-.\_
+    / __} {__ \      /|( o o )|\    ( ( o o ) )
+   / //  "  \\ \    | //  "  \\ |    |/  "  \|
+  / / \'---'/ \ \  / / \'---'/ \ \    \'/^\'/
+  \ \_/`"""`\_/ /  \ \_/`"""`\_/ /    /`\ /`\
+   \           /    \           /    /  /|\  \
+)";
+
+void printParserErrors(std::ostream& out, std::vector<std::string> errors) {
+    out << MONKEY_ASCII_ART << std::endl;
+    out << "Parser Errors:" << std::endl;
+
+    for (const auto& msg : errors) {
+        out << "\t" + msg << std::endl;
+    }
+}
 
 void Start(std::istream& in, std::ostream& out) {
     std::string line;
@@ -12,12 +36,16 @@ void Start(std::istream& in, std::ostream& out) {
             return;
         }
 
-        lexer::Lexer l(line);
-        token::Token tok;
+        auto lexer = std::make_unique<lexer::Lexer>(line);
+        auto parser = parser::New(std::move(lexer));
+        auto program = parser->ParseProgram();
 
-        while ((tok = l.nextToken()).Type != token::EOF_) {
-            out << tok.Type << " " << tok.Literal << std::endl;
+        if (!parser->Errors().empty()) {
+            printParserErrors(out, parser->Errors());
+            continue;
         }
+
+        out << program->String() << std::endl;
     }
 }
 

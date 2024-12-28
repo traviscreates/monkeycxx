@@ -8,10 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Debug)
 
-# Include directories
 include_directories(${PROJECT_SOURCE_DIR})
 
-# Fetch GoogleTest
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -36,13 +34,6 @@ target_link_libraries(lexer_test lexer_lib gtest gtest_main)
 # Include GoogleTest headers
 target_include_directories(lexer_test PRIVATE ${gtest_SOURCE_DIR}/include)
 
-# Add the executable for the REPL (start program)
-add_executable(start main.cxx repl/repl.cxx)
-# Link the start executable with the lexer library and other dependencies
-target_link_libraries(start lexer_lib)
-# Include directories for the REPL
-target_include_directories(start PUBLIC ${PROJECT_SOURCE_DIR}/repl)
-
 add_library(ast_lib ast/ast.cxx token/token.cxx)
 target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/token)
 target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/lexer)
@@ -63,3 +54,16 @@ target_link_libraries(parser_lib lexer_lib ast_lib)
 add_executable(parser_test parser/parser_test.cxx)
 target_link_libraries(parser_test parser_lib lexer_lib ast_lib gtest gtest_main)
 target_include_directories(parser_test PRIVATE ${gtest_SOURCE_DIR}/include)
+
+add_library(repl_lib repl/repl.cxx)
+target_include_directories(repl_lib PUBLIC
+  ${PROJECT_SOURCE_DIR}/lexer
+  ${PROJECT_SOURCE_DIR}/ast
+  ${PROJECT_SOURCE_DIR}/token
+  ${PROJECT_SOURCE_DIR}/parser
+)
+target_link_libraries(repl_lib lexer_lib ast_lib parser_lib)
+
+add_executable(start main.cxx repl/repl.cxx)
+target_link_libraries(start repl_lib)
+target_include_directories(start PUBLIC ${PROJECT_SOURCE_DIR}/repl)

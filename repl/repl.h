@@ -2,8 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include "lexer/lexer.h"
-#include "token/token.h"
 
 namespace repl {
 

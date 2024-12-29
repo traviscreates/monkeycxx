@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "parser.h"
 
+using PrefixTestValue = std::variant<int64_t, bool>;
 using LiteralExpectedType = std::variant<bool, int64_t, std::string, ast::FunctionLiteral*>;
 
 void checkParserErrors(const parser::Parser& p) {
@@ -272,15 +273,16 @@ TEST(ParserTests, TestIntegerLiteralExpression) {
     EXPECT_EQ(int_lit->TokenLiteral(), "5") << "Identifier TokenLiteral is incorrect.";
 }
 
-// TODO: refactor to combine int64_t and bool types
 TEST(ParserTests, TestParsingPrefixExpressions) {
     struct PrefixTest {
         std::string input;
         std::string operator_;
-        int64_t integerValue;
+        PrefixTestValue value;
     };
 
     std::vector<PrefixTest> prefixTests = {
+        {"!true;", "!", true},
+        {"!false;", "!", false},
         {"!5;", "!", 5},
         {"-15;", "-", 15},
     };
@@ -292,51 +294,26 @@ TEST(ParserTests, TestParsingPrefixExpressions) {
         auto program = parser->ParseProgram();
         checkParserErrors(*parser);
         ASSERT_EQ(program->Statements.size(), 1)
-            << "program.Statements does not contain 1 statement";
+            << "program->Statements does not contain 1 statement";
 
         const auto* stmt = dynamic_cast<const ast::ExpressionStatement*>(program->Statements[0].get());
         ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
 
-        const auto* exp = dynamic_cast<const ast::PrefixExpression*>(stmt->Expression.get());
-        ASSERT_NE(exp, nullptr) << "stmt is not ast::PrefixExpression";
-        EXPECT_EQ(exp->Operator, tt.operator_) << "exp.Operator is not '" << tt.operator_ << "'";
-        EXPECT_TRUE(testIntegerLiteral(exp->Right.get(), tt.integerValue));
+        const auto* expr = dynamic_cast<const ast::PrefixExpression*>(stmt->Expression.get());
+        ASSERT_NE(expr, nullptr) << "stmt is not ast::PrefixExpression";
+        EXPECT_EQ(expr->Operator, tt.operator_) << "exp.Operator is not '" << tt.operator_ << "'";
+
+        std::visit([&](auto&& expectedValue) {
+            using T = std::decay_t<decltype(expectedValue)>;
+            if constexpr (std::is_same_v<T, bool>) {
+                EXPECT_TRUE(testBoolean(expr->Right.get(), expectedValue));
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                EXPECT_TRUE(testIntegerLiteral(expr->Right.get(), expectedValue));
+            }
+        }, tt.value);
     }
 }
 
-// TODO: refactor to combine int64_t and bool types
-TEST(ParserTests, TestParsingPrefixExpressionsWithBooleanInput) {
-    struct PrefixTest {
-        std::string input;
-        std::string operator_;
-        bool value;
-    };
-
-    std::vector<PrefixTest> prefixTests = {
-        {"!true;", "!", true},
-        {"!false;", "!", false}
-    };
-
-    for (const auto& tt : prefixTests) {
-        auto lexer = std::make_unique<lexer::Lexer>(tt.input);
-        auto parser = std::make_unique<parser::Parser>(std::move(lexer));
-
-        auto program = parser->ParseProgram();
-        checkParserErrors(*parser);
-        ASSERT_EQ(program->Statements.size(), 1)
-            << "program.Statements does not contain 1 statement";
-
-        const auto* stmt = dynamic_cast<const ast::ExpressionStatement*>(program->Statements[0].get());
-        ASSERT_NE(stmt, nullptr) << "program.Statements[0] is not ast::ExpressionStatement";
-
-        const auto* exp = dynamic_cast<const ast::PrefixExpression*>(stmt->Expression.get());
-        ASSERT_NE(exp, nullptr) << "stmt is not ast::PrefixExpression";
-        EXPECT_EQ(exp->Operator, tt.operator_) << "exp.Operator is not '" << tt.operator_ << "'";
-        EXPECT_TRUE(testBoolean(exp->Right.get(), tt.value));
-    }
-}
-
-// TODO: use testInfixExpression
 TEST(ParserTests, TestParsingInfixExpressions) {
     struct InfixTest {
         std::string input;
@@ -370,13 +347,10 @@ TEST(ParserTests, TestParsingInfixExpressions) {
 
         auto infixExpr = dynamic_cast<ast::InfixExpression*>(stmt->Expression.get());
         ASSERT_NE(infixExpr, nullptr) << "stmt.Expression is not ast::InfixExpression";
-        EXPECT_TRUE(testIntegerLiteral(infixExpr->Left.get(), tt.leftValue));
-        EXPECT_EQ(infixExpr->Operator, tt.op) << "exp.Operator is not '" << tt.op << "'";
-        EXPECT_TRUE(testIntegerLiteral(infixExpr->Right.get(), tt.rightValue));
+        EXPECT_TRUE(testInfixExpression(infixExpr, tt.leftValue, tt.op, tt.rightValue));
     }
 }
 
-// TODO: use testInfixExpression
 TEST(ParserTests, TestParsingInfixBooleanExpressions) {
     struct InfixTest {
         std::string input;
@@ -405,9 +379,7 @@ TEST(ParserTests, TestParsingInfixBooleanExpressions) {
 
         auto infixExpr = dynamic_cast<ast::InfixExpression*>(stmt->Expression.get());
         ASSERT_NE(infixExpr, nullptr) << "stmt.Expression is not ast::InfixExpression";
-        EXPECT_TRUE(testBoolean(infixExpr->Left.get(), tt.leftValue));
-        EXPECT_EQ(infixExpr->Operator, tt.op) << "exp.Operator is not '" << tt.op << "'";
-        EXPECT_TRUE(testBoolean(infixExpr->Right.get(), tt.rightValue));
+        EXPECT_TRUE(testInfixExpression(infixExpr, tt.leftValue, tt.op, tt.rightValue));
     }
 }
 

@@ -2,7 +2,7 @@
 
 files=(
     "CMakeCache.txt" "CMakeFiles" "Makefile" "cmake_install.cmake" "_deps" "bin" "lib"
-    "compile_commands.json" "liblexer_lib.a" "libast_lib.a" "libparser_lib.a"
+    "compile_commands.json" "liblexer_lib.a" "libast_lib.a" "libparser_lib.a" "librepl_lib.a"
 )
 
 for file in "${files[@]}"; do

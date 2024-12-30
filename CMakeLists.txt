@@ -35,9 +35,11 @@ target_link_libraries(lexer_test lexer_lib gtest gtest_main)
 target_include_directories(lexer_test PRIVATE ${gtest_SOURCE_DIR}/include)
 
 add_library(ast_lib ast/ast.cxx token/token.cxx)
-target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/token)
-target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/lexer)
-target_include_directories(ast_lib PUBLIC ${PROJECT_SOURCE_DIR}/ast)
+target_include_directories(ast_lib PUBLIC
+  ${PROJECT_SOURCE_DIR}/token
+  ${PROJECT_SOURCE_DIR}/lexer
+  ${PROJECT_SOURCE_DIR}/ast
+)
 
 add_executable(ast_test ast/ast_test.cxx)
 target_link_libraries(ast_test ast_lib lexer_lib gtest gtest_main)

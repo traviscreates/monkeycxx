@@ -1,8 +1,7 @@
-#include "gtest/gtest.h"
 #include <cstdint>
-#include <gtest/gtest.h>
 #include <memory>
 #include <typeinfo>
+#include "gtest/gtest.h"
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"

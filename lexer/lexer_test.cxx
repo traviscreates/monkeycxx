@@ -1,7 +1,7 @@
 #include <string>
 #include "gtest/gtest.h"
-#include "lexer/lexer.h"
-#include "token/token.h"
+#include "lexer.h"
+#include "token.h"
 
 namespace lexer {
 

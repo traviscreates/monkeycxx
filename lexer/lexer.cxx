@@ -135,4 +135,4 @@ token::Token Lexer::nextToken() {
     return tok;
 }
 
-} // namespace lexer
+}

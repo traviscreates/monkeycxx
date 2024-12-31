@@ -57,19 +57,6 @@ add_executable(parser_test parser/parser_test.cxx)
 target_link_libraries(parser_test parser_lib lexer_lib ast_lib gtest gtest_main)
 target_include_directories(parser_test PRIVATE ${gtest_SOURCE_DIR}/include)
 
-add_library(repl_lib repl/repl.cxx)
-target_include_directories(repl_lib PUBLIC
-  ${PROJECT_SOURCE_DIR}/lexer
-  ${PROJECT_SOURCE_DIR}/ast
-  ${PROJECT_SOURCE_DIR}/token
-  ${PROJECT_SOURCE_DIR}/parser
-)
-target_link_libraries(repl_lib lexer_lib ast_lib parser_lib)
-
-add_executable(start main.cxx repl/repl.cxx)
-target_link_libraries(start repl_lib)
-target_include_directories(start PUBLIC ${PROJECT_SOURCE_DIR}/repl)
-
 add_library(object_lib object/object.cxx)
 add_library(evaluator_lib evaluator/evaluator.cxx)
 target_include_directories(evaluator_lib PUBLIC
@@ -83,3 +70,17 @@ target_link_libraries(evaluator_lib ast_lib object_lib parser_lib lexer_lib)
 add_executable(evaluator_test evaluator/evaluator_test.cxx)
 target_link_libraries(evaluator_test evaluator_lib gtest gtest_main)
 target_include_directories(evaluator_test PRIVATE ${gtest_SOURCE_DIR}/include)
+
+add_library(repl_lib repl/repl.cxx)
+target_include_directories(repl_lib PUBLIC
+  ${PROJECT_SOURCE_DIR}/lexer
+  ${PROJECT_SOURCE_DIR}/ast
+  ${PROJECT_SOURCE_DIR}/token
+  ${PROJECT_SOURCE_DIR}/parser
+  ${PROJECT_SOURCE_DIR}/evaluator
+)
+target_link_libraries(repl_lib lexer_lib ast_lib parser_lib evaluator_lib)
+
+add_executable(start main.cxx repl/repl.cxx)
+target_link_libraries(start repl_lib)
+target_include_directories(start PUBLIC ${PROJECT_SOURCE_DIR}/repl)

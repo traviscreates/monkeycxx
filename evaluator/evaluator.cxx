@@ -98,6 +98,12 @@ namespace evaluator {
             const std::string& op, const std::shared_ptr<object::Object>& left,
             const std::shared_ptr<object::Object>& right) {
         if (
+            left->Type() == object::ObjectType::BOOLEAN &&
+            right->Type() == object::ObjectType::BOOLEAN) {
+            return evalBooleanInfixExpression(op, left, right);
+        }
+
+        if (
             left->Type() == object::ObjectType::INTEGER &&
             right->Type() == object::ObjectType::INTEGER) {
             return evalIntegerInfixExpression(op, left, right);
@@ -129,6 +135,26 @@ namespace evaluator {
                 return NULL_;
             }
             return std::make_shared<object::Integer>(object::Integer{leftInt / rightInt});
+        } else if (op == "<") {
+            return leftInt < rightInt ? TRUE : FALSE;
+        } else if (op == ">") {
+            return leftInt > rightInt ? TRUE : FALSE;
+        } else if (op == "==") {
+            return leftInt == rightInt ? TRUE : FALSE;
+        } else if (op == "!=") {
+            return leftInt != rightInt ? TRUE : FALSE;
+        }
+
+        return NULL_;
+    }
+
+    std::shared_ptr<object::Object> evalBooleanInfixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& left,
+            const std::shared_ptr<object::Object>& right) {
+        if (op == "==") {
+            return left == right ? TRUE : FALSE;
+        } else if (op == "!=") {
+            return left != right ? TRUE : FALSE;
         }
 
         return NULL_;

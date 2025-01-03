@@ -1,5 +1,6 @@
 #include "evaluator.h"
 #include <memory>
+#include <string>
 #include "ast.h"
 #include "object.h"
 
@@ -31,6 +32,12 @@ namespace evaluator {
         if (const auto* prefixExpr = dynamic_cast<const ast::PrefixExpression*>(&node)) {
             auto right = Eval(*prefixExpr->Right);
             return evalPrefixExpression(prefixExpr->Operator, right);
+        }
+
+        if (const auto* infixExpr = dynamic_cast<const ast::InfixExpression*>(&node)) {
+            auto left = Eval(*infixExpr->Left);
+            auto right = Eval(*infixExpr->Right);
+            return evalInfixExpression(infixExpr->Operator, left, right);
         }
 
         return nullptr;
@@ -75,7 +82,6 @@ namespace evaluator {
 
     std::shared_ptr<object::Object> evalMinusPrefixOperatorExpression(
             const std::shared_ptr<object::Object>& right) {
-
         if (right->Type() != object::ObjectType::INTEGER) {
             return NULL_;
         }
@@ -83,6 +89,46 @@ namespace evaluator {
         auto intObj = std::dynamic_pointer_cast<object::Integer>(right);
         if (intObj) {
             return std::make_shared<object::Integer>(object::Integer{-intObj->Value});
+        }
+
+        return NULL_;
+    }
+
+    std::shared_ptr<object::Object> evalInfixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& left,
+            const std::shared_ptr<object::Object>& right) {
+        if (
+            left->Type() == object::ObjectType::INTEGER &&
+            right->Type() == object::ObjectType::INTEGER) {
+            return evalIntegerInfixExpression(op, left, right);
+        }
+
+        return NULL_;
+    }
+
+    std::shared_ptr<object::Object> evalIntegerInfixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& left,
+            const std::shared_ptr<object::Object>& right) {
+        auto leftIntObj = std::dynamic_pointer_cast<object::Integer>(left);
+        auto rightIntObj = std::dynamic_pointer_cast<object::Integer>(right);
+        if (!leftIntObj || !rightIntObj) {
+            return NULL_;
+        }
+
+        int64_t leftInt = leftIntObj->Value;
+        int64_t rightInt = rightIntObj->Value;
+
+        if (op == "+") {
+            return std::make_shared<object::Integer>(object::Integer{leftInt + rightInt});
+        } else if (op == "-") {
+            return std::make_shared<object::Integer>(object::Integer{leftInt - rightInt});
+        } else if (op == "*") {
+            return std::make_shared<object::Integer>(object::Integer{leftInt * rightInt});
+        } else if (op == "/") {
+            if (rightInt == 0) {
+                return NULL_;
+            }
+            return std::make_shared<object::Integer>(object::Integer{leftInt / rightInt});
         }
 
         return NULL_;

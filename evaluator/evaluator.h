@@ -20,6 +20,12 @@ namespace evaluator {
             const std::shared_ptr<object::Object>& right);
     std::shared_ptr<object::Object> evalMinusPrefixOperatorExpression(
             const std::shared_ptr<object::Object>& right);
+    std::shared_ptr<object::Object> evalInfixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& left,
+            const std::shared_ptr<object::Object>& right);
+    std::shared_ptr<object::Object> evalIntegerInfixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& left,
+            const std::shared_ptr<object::Object>& right);
 }
 
 #endif

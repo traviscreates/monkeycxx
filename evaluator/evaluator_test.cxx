@@ -54,6 +54,8 @@ TEST(EvaluatorTests, TestEvalIntegerExpression) {
     std::vector<TestCase> tests = {
         {"5", 5},
         {"10", 10},
+        {"-5", -5},
+        {"-10", -10},
     };
 
     for (const auto& test : tests) {
@@ -77,6 +79,27 @@ TEST(EvaluatorTests, TestEvalBooleanExpression) {
     for (const auto& test : tests) {
         auto evaluated = testEval(test.input);
         ASSERT_TRUE(evaluated) << "Evaluated object is null.";
+        ASSERT_TRUE(testBooleanObject(*evaluated, test.expected));
+    }
+}
+
+TEST(EvaluatorTests, TestBangOperator) {
+    struct TestCase {
+        std::string input;
+        bool expected;
+    };
+
+    std::vector<TestCase> tests = {
+        {"!true", false},
+        {"!false", true},
+        {"!5", false},
+        {"!!true", true},
+        {"!!false", false},
+        {"!!5", true},
+    };
+
+    for (const auto& test : tests) {
+        auto evaluated = testEval(test.input);
         ASSERT_TRUE(testBooleanObject(*evaluated, test.expected));
     }
 }

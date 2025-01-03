@@ -5,6 +5,7 @@
 
 namespace evaluator {
 
+    const std::shared_ptr<object::Null> NULL_ = std::make_shared<object::Null>();
     const std::shared_ptr<object::Boolean> TRUE = std::make_shared<object::Boolean>(
             object::Boolean{true});
     const std::shared_ptr<object::Boolean> FALSE = std::make_shared<object::Boolean>(
@@ -27,6 +28,11 @@ namespace evaluator {
             return boolNode->Value ? TRUE : FALSE;
         }
 
+        if (const auto* prefixExpr = dynamic_cast<const ast::PrefixExpression*>(&node)) {
+            auto right = Eval(*prefixExpr->Right);
+            return evalPrefixExpression(prefixExpr->Operator, right);
+        }
+
         return nullptr;
     }
 
@@ -39,6 +45,47 @@ namespace evaluator {
         }
 
         return result;
+    }
+
+    std::shared_ptr<object::Object> evalPrefixExpression(
+            const std::string& op, const std::shared_ptr<object::Object>& right) {
+        if (op == "!") {
+            return evalBangOperatorExpression(right);
+        }
+
+        if (op == "-") {
+            return evalMinusPrefixOperatorExpression(right);
+        }
+
+        return NULL_;
+    }
+
+    std::shared_ptr<object::Object> evalBangOperatorExpression(
+            const std::shared_ptr<object::Object>& right) {
+        if (right == TRUE) {
+            return FALSE;
+        }
+
+        if (right == FALSE || right == NULL_) {
+            return TRUE;
+        }
+
+        return FALSE;
+    }
+
+    std::shared_ptr<object::Object> evalMinusPrefixOperatorExpression(
+            const std::shared_ptr<object::Object>& right) {
+
+        if (right->Type() != object::ObjectType::INTEGER) {
+            return NULL_;
+        }
+
+        auto intObj = std::dynamic_pointer_cast<object::Integer>(right);
+        if (intObj) {
+            return std::make_shared<object::Integer>(object::Integer{-intObj->Value});
+        }
+
+        return NULL_;
     }
 
 }

@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "gtest/gtest.h"
 #include "lexer.h"
 #include "parser.h"
@@ -22,6 +23,15 @@ bool testIntegerObject(const object::Object& obj, int64_t expected) {
     if (intObj->Value != expected) {
         ADD_FAILURE() << "object::Object has wrong value. Got: " << intObj->Value
                       << ", expected: " << expected;
+        return false;
+    }
+
+    return true;
+}
+
+bool testNullObject(const std::shared_ptr<object::Object>& obj) {
+    if (obj != evaluator::NULL_) {
+        ADD_FAILURE() << "object is not NULL. Got: " << typeid(decltype(*obj)).name();
         return false;
     }
 
@@ -131,5 +141,33 @@ TEST(EvaluatorTests, TestBangOperator) {
     for (const auto& test : tests) {
         auto evaluated = testEval(test.input);
         ASSERT_TRUE(testBooleanObject(*evaluated, test.expected));
+    }
+}
+
+TEST(EvaluatorTests, TestIfElseExpressions) {
+    struct TestCase {
+        std::string input;
+        std::optional<int64_t> expected;
+    };
+
+    std::vector<TestCase> tests = {
+        {"if (true) { 10 }", 10},
+        {"if (false) { 10 }", std::nullopt},
+        {"if (1) { 10 }", 10},
+        {"if (1 < 2) { 10 }", 10},
+        {"if (1 > 2) { 10 }", std::nullopt},
+        {"if (1 > 2) { 10 } else { 20 }", 20},
+        {"if (1 < 2) { 10 } else { 20 }", 10},
+    };
+
+    for (const auto& test : tests) {
+        auto evaluated = testEval(test.input);
+
+        if (test.expected) {
+            ASSERT_TRUE(evaluated);
+            ASSERT_TRUE(testIntegerObject(*evaluated, *test.expected));
+        } else {
+            ASSERT_TRUE(testNullObject(evaluated));
+        }
     }
 }

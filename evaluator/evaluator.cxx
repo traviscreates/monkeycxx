@@ -40,6 +40,14 @@ namespace evaluator {
             return evalInfixExpression(infixExpr->Operator, left, right);
         }
 
+        if (const auto* blockStmt = dynamic_cast<const ast::BlockStatement*>(&node)) {
+            return evalStatements(blockStmt->Statements);
+        }
+
+        if (const auto* ifExpr = dynamic_cast<const ast::IfExpression*>(&node)) {
+            return evalIfExpression(*ifExpr);
+        }
+
         return nullptr;
     }
 
@@ -153,11 +161,42 @@ namespace evaluator {
             const std::shared_ptr<object::Object>& right) {
         if (op == "==") {
             return left == right ? TRUE : FALSE;
-        } else if (op == "!=") {
+        }
+
+        if (op == "!=") {
             return left != right ? TRUE : FALSE;
         }
 
         return NULL_;
     }
 
+    std::shared_ptr<object::Object> evalIfExpression(const ast::IfExpression& ifExpr) {
+        auto condition = Eval(*ifExpr.Condition);
+
+        if (isTruthy(condition)) {
+            return Eval(*ifExpr.Consequence);
+        }
+
+        if (ifExpr.Alternative) {
+            return Eval(*ifExpr.Alternative);
+        }
+
+        return NULL_;
+    }
+
+    bool isTruthy(const std::shared_ptr<object::Object>& obj) {
+        if (obj == NULL_) {
+            return false;
+        }
+
+        if (obj == TRUE) {
+            return true;
+        }
+
+        if (obj == FALSE) {
+            return false;
+        }
+
+        return true;
+    }
 }

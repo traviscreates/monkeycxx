@@ -8,7 +8,8 @@ namespace object {
 enum class ObjectType {
     BOOLEAN,
     INTEGER,
-    NULL_OBJ
+    NULL_OBJ,
+    RETURN_VALUE,
 };
 
 class Object {
@@ -43,6 +44,21 @@ class Null : public Object {
 public:
     ObjectType Type() const override { return ObjectType::NULL_OBJ; }
     std::string Inspect() const override;
+};
+
+class ReturnValue : public Object {
+public:
+    std::shared_ptr<Object> Value;
+
+    explicit ReturnValue(std::shared_ptr<Object> value) : Value(std::move(value)) {}
+
+    ObjectType Type() const override {
+        return ObjectType::RETURN_VALUE;
+    }
+
+    std::string Inspect() const override {
+        return Value ? Value->Inspect() : "";
+    }
 };
 
 }

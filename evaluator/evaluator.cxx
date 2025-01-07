@@ -14,7 +14,7 @@ namespace evaluator {
 
     std::shared_ptr<object::Object> Eval(const ast::Node& node) {
         if (const auto* program = dynamic_cast<const ast::Program*>(&node)) {
-            return evalStatements(program->Statements);
+            return evalProgram(program);
         }
 
         if (const auto* exprStmt = dynamic_cast<const ast::ExpressionStatement*>(&node)) {
@@ -41,22 +41,30 @@ namespace evaluator {
         }
 
         if (const auto* blockStmt = dynamic_cast<const ast::BlockStatement*>(&node)) {
-            return evalStatements(blockStmt->Statements);
+            return evalBlockStatement(*blockStmt);
         }
 
         if (const auto* ifExpr = dynamic_cast<const ast::IfExpression*>(&node)) {
             return evalIfExpression(*ifExpr);
         }
 
+        if (const auto* returnStmt = dynamic_cast<const ast::ReturnStatement*>(&node)) {
+            auto result = Eval(*returnStmt->ReturnValue);
+            return std::make_shared<object::ReturnValue>(result);
+        }
+
         return nullptr;
     }
 
-    std::shared_ptr<object::Object> evalStatements(
-            const std::vector<std::unique_ptr<ast::Statement>> &statements) {
+    std::shared_ptr<object::Object> evalProgram(const ast::Program* program) {
         std::shared_ptr<object::Object> result = nullptr;
 
-        for (const auto& stmt : statements) {
+        for (const auto& stmt : program->Statements) {
             result = Eval(*stmt);
+
+            if (const auto* returnValue = dynamic_cast<const object::ReturnValue*>(result.get())) {
+                return returnValue->Value;
+            }
         }
 
         return result;
@@ -182,6 +190,20 @@ namespace evaluator {
         }
 
         return NULL_;
+    }
+
+    std::shared_ptr<object::Object> evalBlockStatement(const ast::BlockStatement& blockStmnt) {
+        std::shared_ptr<object::Object> result = nullptr;
+
+        for (const auto& stmt : blockStmnt.Statements) {
+            result = Eval(*stmt);
+
+            if (const auto* returnValue = dynamic_cast<const object::ReturnValue*>(result.get())) {
+                return result;
+            }
+        }
+
+        return result;
     }
 
     bool isTruthy(const std::shared_ptr<object::Object>& obj) {
